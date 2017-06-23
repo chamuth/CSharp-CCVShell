@@ -10,6 +10,7 @@ using System.Net;
 
 namespace CCVShell
 {
+
     class Program
     {
         private static string _currentDirectory = "";
@@ -27,6 +28,7 @@ namespace CCVShell
             }
         }
 
+        [STAThread]
         static void Main(string[] args)
         {
             Console.WriteLine();
@@ -149,7 +151,7 @@ namespace CCVShell
                             {
                                 //Get files with information
                                 var result = JsonConvert.DeserializeObject<Entities.ls_al>(response.Content);
-                                
+
 
                                 foreach (var file in result.files)
                                 {
@@ -225,7 +227,7 @@ namespace CCVShell
                                     {
                                         var savefile = (localdir + file.name.Replace(endpoint, ""));
                                         savefile = savefile.Replace("C:/xampp/htdocs/CCVShell/Server/", ""); // FOR TESTING
-                                        var downloc = endpoint + "/CCVShell/Handle.php?p=" + password + "&cmd=sync file " + file.name;                                      
+                                        var downloc = endpoint + "/CCVShell/Handle.php?p=" + password + "&cmd=sync file " + file.name;
 
                                         cs.Headers["Accept-Encoding"] = "application/octet-stream";
 
@@ -282,9 +284,25 @@ namespace CCVShell
                             }
                         }
                     }
+                    else if (seperations[0] == "http")
+                    {
+                        Console.WriteLine(); // Add a line ending
+
+                        foreach (var par in response.Headers)
+                        {
+                            Alert.AlertUser(Alert.AlertType.Information, par.Name.ToString() + ":" + par.Value.ToString());
+                        }
+
+                        Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+
+                        if (seperations[seperations.Length - 1] == "-copy")
+                        {
+                            System.Windows.Forms.Clipboard.SetText(response.Content); // Copy the content of the html page to the clipboard 
+                        }
+                    }
 
                 }
-                catch (IndexOutOfRangeException) { Console.WriteLine(response.Content); }
+                catch (Exception) { Console.WriteLine(response.Content); }
 
                 return true;
             }
