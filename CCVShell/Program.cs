@@ -44,6 +44,83 @@ namespace CCVShell
                     Console.WriteLine("(Adds a new server to the local configuration)");
                 }
             }
+            else if (args[0].ToLower() == "update")
+            {
+                if (args.Length == 2)
+                {
+                    var servername = args[1];
+                    var filename = "Server\\" + servername + ".json";
+
+                    if (File.Exists(filename))
+                    {
+                        var details = JsonConvert.DeserializeObject<Entities.Server>(File.ReadAllText(filename));
+
+                        Console.Write("Server Name "); Alert.AlertUser(Alert.AlertType.Warning, "(" + details.Name + ") : ", false);
+                        var name = Console.ReadLine();
+                        Console.Write("Server Endpoint "); Alert.AlertUser(Alert.AlertType.Warning, "(" + details.Endpoint + ") : ", false);
+                        var endpoint = Console.ReadLine();
+                        Console.Write("Server Local Directory "); Alert.AlertUser(Alert.AlertType.Warning, "(" + details.LocalDirectory + ") : ", false);
+                        var ldir = Console.ReadLine();
+                        Console.Write("Server Password "); Alert.AlertUser(Alert.AlertType.Warning, "(" + details.Password + ") : ", false);
+                        var password = Console.ReadLine();
+
+                        if (name != "") details.Name = name;
+                        if (endpoint != "") details.Endpoint = name;
+                        if (ldir != "") details.LocalDirectory = name;
+                        if (password != "") details.Password = name;
+
+                        Console.WriteLine();
+                        Console.WriteLine("Server Configuration updated!");
+                        Console.WriteLine();
+
+                        File.WriteAllText(filename, JsonConvert.SerializeObject(details));
+
+                        if (name.Replace(" ", "") != "")
+                            File.Move(filename, "Server\\" + name + ".json");
+                        
+                    }else
+                    {
+                        Console.WriteLine("The server name \"" + args[1] + "\" is not configured, use CCVSHELL CONNECT [SERVER]");
+                    }
+
+                }
+                else
+                {
+                    Console.WriteLine("Usage: CCVShell update [NAME]");
+                    Console.WriteLine("(Adds a new server to the local configuration)");
+                }
+            }
+            else if (args[0].ToLower() == "list")
+            {
+                if (args.Length == 1)
+                {
+                    foreach (var file in Directory.GetFiles("Server"))
+                    {
+                        var details = JsonConvert.DeserializeObject<Entities.Server>(File.ReadAllText(file));
+
+                        Alert.AlertUser(Alert.AlertType.Warning, file.Replace(".json", "").Replace("Server\\", ""), false);
+                        Alert.AlertUser(Alert.AlertType.Normal, " (" + details.Endpoint + ")");
+                    }
+                }
+                else if (args.Length == 2)
+                {
+                    var filename = "Server\\" + args[1] + ".json";
+
+                    if (File.Exists(filename))
+                    {
+                        var details = JsonConvert.DeserializeObject<Entities.Server>(File.ReadAllText(filename));
+
+                        Alert.AlertUser(Alert.AlertType.Warning, ("Name: "), false); Alert.AlertUser(Alert.AlertType.Normal, details.Name);
+                        Alert.AlertUser(Alert.AlertType.Warning, ("Endpoint: "), false); Alert.AlertUser(Alert.AlertType.Normal, details.Endpoint);
+                        Alert.AlertUser(Alert.AlertType.Warning, ("Local Directory: "), false); Alert.AlertUser(Alert.AlertType.Normal, details.LocalDirectory);
+                        Alert.AlertUser(Alert.AlertType.Warning, ("Password: "), false); Alert.AlertUser(Alert.AlertType.Normal, details.Password);
+                    }
+                    else
+                    {
+                        Console.WriteLine("The server name \"" + args[1] + "\" is not configured, use CCVSHELL CONNECT [SERVER]");
+                    }
+                }
+            }
             else if (args[0].ToLower() == "connect") // CCVSHELL CONNECT [SERVER]
             {
                 if (args.Length == 2)
@@ -75,7 +152,7 @@ namespace CCVShell
                             {
                                 if (command != "exit")
                                 {
-                                    cmd(configuration.Endpoint, command, configuration.Password); //Execute the command
+                                    cmd(configuration.Endpoint, command.ToLower(), configuration.Password); //Execute the command
                                 }
                                 else
                                 {
@@ -135,7 +212,11 @@ namespace CCVShell
             {
                 try
                 {
-                    var seperations = command.Split(' ');
+                    var newcom = command.Trim(); // Trim it from left and right
+                    newcom = newcom.ultraTrim();
+
+                    var seperations = newcom.Split(' ');
+                    seperations[0] = seperations[0].ToLower();
 
 
                     if (seperations[0] == "pwd")
@@ -143,15 +224,84 @@ namespace CCVShell
                         var result = JsonConvert.DeserializeObject<Entities.pwd>(response.Content);
                         Alert.AlertUser(Alert.AlertType.Normal, result.cd);
                     }
+                    else if (seperations[0] == "search")
+                    {
+                        var result = JsonConvert.DeserializeObject<Entities.Filenames>(response.Content);
+
+                        if (result.files.Length == 0)
+                        {
+                            //Found 0 files
+                            Alert.AlertUser(Alert.AlertType.Information, string.Format("Found {0} files", result.files.Length), false);
+                            Console.Write(string.Format(" for the search term "));
+                            Alert.AlertUser(Alert.AlertType.Information, string.Format("\"{0}\"", seperations[1]));
+                        }
+                        else
+                        {
+                            Alert.AlertUser(Alert.AlertType.Information, string.Format("Found {0} files", result.files.Length), false);
+                            Console.Write(string.Format(" for the search term "));
+
+                            var searchterm = "*";
+                            if (seperations.Length > 1)
+                            {
+                                searchterm = seperations[1];
+                                if (searchterm.StartsWith("*.")) searchterm = "*";
+                            }
+
+                            Alert.AlertUser(Alert.AlertType.Information, string.Format("\"{0}\"", searchterm));
+                            Console.WriteLine();
+
+                            foreach (var file in result.files)
+                            {
+                                if (seperations.Contains("-i"))
+                                {
+                                    // User requests more information about the searched files
+                                    var t = UnixTimeStampToDateTime(double.Parse(file.mtime));
+
+                                    if (file.isDir)
+                                    {
+                                        Alert.AlertUser(Alert.AlertType.Warning, file.permission + "\t" +
+                                            t.ToShortDateString() + " " + t.ToShortTimeString() + "\t" +
+                                            file.length + "\t" + "\t" +
+                                            file.name);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine(file.permission + "\t" +
+                                            t.ToShortDateString() + " " + t.ToShortTimeString() + "\t" +
+                                            file.length + "\t" + "\t" +
+                                            file.name);
+                                    }
+                                }
+                                else
+                                {
+                                    if (file.isDir)
+                                        Alert.AlertUser(Alert.AlertType.Warning, file.name);
+                                    else
+                                        Alert.AlertUser(Alert.AlertType.Normal, file.name);
+                                }
+
+                            }
+
+                            if (seperations.Contains("-copy"))
+                            {
+                                var contenter = "";
+                                Array.ForEach(result.files, (x) =>
+                                {
+                                    contenter += x.name;
+                                });
+
+                                System.Windows.Forms.Clipboard.SetText(contenter);
+                            }
+                        }
+                    }
                     else if (seperations[0] == "ls")
                     {
                         if (seperations.Length == 2)
                         {
-                            if (seperations[0] == "ls" && seperations[1] == "-al")
+                            if (seperations.Contains("-al"))
                             {
                                 //Get files with information
                                 var result = JsonConvert.DeserializeObject<Entities.ls_al>(response.Content);
-
 
                                 foreach (var file in result.files)
                                 {
@@ -200,6 +350,39 @@ namespace CCVShell
                     {
                         var result = JsonConvert.DeserializeObject<Entities.pwd>(response.Content);
                         currentDirectory = result.cd; // Setup the current directory
+                    }
+                    else if (seperations[0] == "touch" || seperations[0] == "mkdir" || seperations[0] == "rm" || seperations[0] == "ren")
+                    {
+                        if (response.Content != "")
+                            Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+                    }
+                    else if (seperations[0] == "file")
+                    {
+                        Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+
+                        if (seperations[seperations.Length - 1] == "-copy")
+                        {
+                            System.Windows.Forms.Clipboard.SetText(response.Content);
+                        }
+                    }
+                    else if (seperations[0] == "cpm")
+                    {
+                        if (seperations.Length > 1)
+                        {
+                            if (seperations[1] == "-v")
+                            {
+                                //Checking the version
+                                Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+                            }
+                            else if (seperations[1] == "init" || seperations[1] == "install")
+                            {
+                                Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+                            }
+                        }
+                        else
+                        {
+                            Alert.AlertUser(Alert.AlertType.Normal, response.Content);
+                        }
                     }
                     else if (seperations[0] == "sync")
                     {
