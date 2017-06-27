@@ -1,10 +1,27 @@
-# CCVShell for PHP
+# CCVShell Client
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CCVShell it's a virtual SSH developed for Linux and Windows Servers. CCVShell comes with two editions client version and the server version. Server version is stored in the Webhost (Web server), in the public_html (or public root) directory. The Client version is stored in your computer, it is a executable program installed using a regular windows installer and can be used via the Command Prompt. See the tutorial for help.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CCVShell it's a virtual SSH developed for Linux and Windows Servers. CCVShell comes with two editions client version and the server version. Client edition is stored in the client computer, and is used to access a CCVShell server.
 
-## COMMANDS OF CCVSHELL
+## CONFIGURATION OF CCVSHELL CLIENT
+1. First add CCVShell.exe to your `PATH` environment variable if it's not added previously. Use `PATH` in command prompt to learn more.
+2. Use `ccvshell add [SERVER_NAME] [SERVER_URL]` to add and save a server configuration to your system. (A trailing slash at the end of the `SERVER_URL` is mandatory)
+	- Provide the Password that you stored in the `config.json` in your [CCVShell server](http://www.github.com/Chamuth/php-ccvshell)
+	- Provide the local directory for your server. (Essential in syncing files between the remote server and your computer)
+3. Use `ccvshell connect [SERVER_NAME]` to connect to the configured server. No password entry is required. 
+4. Use commands given below for navigation, I/O and other processes
+
+## COMMANDS FOR CCVSHELL
+- Adding and configuring a CCVShell server
+	- add : Add a server
+- List all the servers configured
+	- list : List all the servers
+	- list [SERVER_NAME] : List information about a specific server
+- Update configured servers
+	- update [SERVER_NAME] : Update a specific server
+
+## COMMANDS FOR CONNECTED CCVSHELL
 - Navigation through files in the server
-	-	pwd : See the current directory
+	- pwd : See the current directory
 	- cd : Change the current directory
 - Copy, move, rename, and delete files
 	- move : Move files
@@ -27,16 +44,3 @@
 	- http : used to send HTTP GET requests to a specified server and obtain raw html data from it. Use -copy attribute to copy that to the clipboard
 - Editing files without downloading and uploading.
 	- edit : edit files in notepad or specified program without downloading or uploading, let ccvshell client do it's task
-
-## INSTALLATION (SERVER)
-
-**1. Download and copy the CCVShell directory to your public_html (or the public root) of your web server.**
-You can use your cpanel or ftp to upload that directory to your web server<br><br>
-**2. Create a file named *config.json* one directory up in the web server's public_html directory (previous directory, so that publicly no one can access it)**
-
-```
-{ "password" : "INSERT_PASSWORD_HERE" }
-```
-(This file contains the CCVShell password that is used from the client to access the server)
-<br><br>
-**3. You have successfully installed CCVShell Server on your web server. Install the CCVShell Client and follow the steps given there. :D**
